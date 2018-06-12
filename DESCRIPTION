@@ -24,9 +24,7 @@ Imports:
     gridExtra,
     igraph,
     reshape2,
-    big.phylo,
     lattice,
-    phydynR,
     Rcpp,
     RcppArmadillo
 Remotes:
