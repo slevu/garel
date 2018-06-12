@@ -32,7 +32,9 @@ Remotes:
     github.com/emvolz-phylodynamics/phydynR/tree/dPikL0.1
 RoxygenNote: 6.0.1
 Suggests: knitr,
-    rmarkdown,
+    rmarkdown, 
+    big.phylo, 
+    phydynR,
     tenbrit
 VignetteBuilder: knitr
 LinkingTo: Rcpp,
