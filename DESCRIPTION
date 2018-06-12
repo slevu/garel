@@ -1,0 +1,41 @@
+Package: garel
+Type: Package
+Title: Analysis of UK HIV Sequence Data
+Version: 0.0.0.9000
+Authors@R: person("Stephane", "Le Vu", email = "s.le-vu@imperial.ac.uk", role = c("aut", "cre"))
+Description: Pipelines to build trees and apply source attribution analyses.
+    Data are available from 'tenbrit' package. It is installed with
+    'install.packages("tenbrit_0.1.0.tar.gz", 
+    lib = "/export131/home/slevu/anaconda3/lib/R/library", 
+    repos = NULL, INSTALL_opts = c('--no-lock'), type="source")'.
+Depends:
+    R (>= 3.3.2)
+License: GPL-2
+LazyData: true
+Imports:
+    ape (>= 4.1),
+    phytools,
+    data.table (>= 1.10.4),
+    devtools,
+    parallel,
+    outliers,
+    funr,
+    ggplot2,
+    gridExtra,
+    igraph,
+    reshape2,
+    big.phylo,
+    lattice,
+    phydynR,
+    Rcpp,
+    RcppArmadillo
+Remotes:
+    github.com/slevu/big.phylo.git,
+    github.com/emvolz-phylodynamics/phydynR/tree/dPikL0.1
+RoxygenNote: 6.0.1
+Suggests: knitr,
+    rmarkdown,
+    tenbrit
+VignetteBuilder: knitr
+LinkingTo: Rcpp,
+  RcppArmadillo

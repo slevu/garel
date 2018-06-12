@@ -1,0 +1,7 @@
+#!/usr/bin/env Rscript
+
+##- Rscript with funr
+library(garel)
+library(funr)
+
+out = funr(commandArgs(trailingOnly = TRUE))

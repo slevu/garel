@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+.Rapp.history
+data
+data-raw/*.csv
+data-raw/*.fasta
+blastDB
+inst/doc
