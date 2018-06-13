@@ -232,6 +232,7 @@ do_examl <- function(FAS = "data/MSM_CRF02AG_splits/MSM_CRF02AG_nodrm_ref_og.fas
   INFILE <- basename(tofile)
   ##- local machine (fasta input)
   cmd <- big.phylo::cmd.examl.bootstrap.on.one.machine(indir=FULLDIR, infile=INFILE, bs.from=bsdebut, bs.to=bsend)
+  system(paste("bash", cmd))
   }
   return(jobid)
 }

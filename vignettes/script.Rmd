@@ -1,0 +1,105 @@
+---
+title: "script"
+author: "Stephane Le Vu"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{script}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Pipeline for analysis of UK Drug resistance database
+
+- Raw data from UK Drug Resistance database and Public Health England collaboration received on 13 September 2016.
+- Subtype specific (A, B, C, CRF02AG) HIV1 global sequences (one per patient) from Los Alamos National Laboratory, were downloaded on 7 December 2016, with position from 2253 to 3798, including HXB2. Sequences originated from the UK were removed from these.
+- In the package data are already pre-processed with some recoding and can be obtained from:
+
+```{r see_data}
+library(tenbrit)
+d <- data(package = "tenbrit")
+d$results[,3:4]
+```
+- And documentation for processed data, as well as initial raw file (in `References`), is available from:
+```{r see_doc, eval = FALSE}
+help(resi)
+```
+
+All subsequent code comes from `garel` package
+```{r lib}
+library(garel)
+rerun <- FALSE
+```
+
+### Load UK and LANL sequences
+- I stratify multi sequence alignments of UK sequences in `s950` into 8 (transmission mode $\times$ subtype) groups (creates `data` folder)
+
+```{r stratify_sequences, eval = rerun}
+stratify_msa()
+```
+
+- And I copy the global sequences MSAs also here
+```{r copy_lanl, eval = rerun}
+lanl_msa()
+```
+
+- Output are here:
+```{r, eval = TRUE}
+uk_files <- list.files("data", "^MSM_.*\\.(rda|rds)$", full.names = TRUE)
+uk_files
+lanl_files <- list.files("data", "^db_.*\\.(rda|rds)$", full.names = TRUE)
+lanl_files
+```
+### make a smaller msa
+```{r}
+seqs <- readRDS("./data/MSM_CRF02AG.rds")
+saveRDS(seqs[sample(length(seqs),size = 20)], file = "data/MSM_CRF02AG_small.rds")
+uk_files <- list.files("data", "^MSM_.*\\.(rda|rds)$", full.names = TRUE)
+uk_files
+```
+
+### Make BLAST databases
+- With a pipeline that
+    - splits MSA in small chunks (100 sequences each by default)
+    - removes drug resistance mutation sites
+    - merges back the splits
+    - makes a BLAST database in `blastDB` folder
+- Here I run the non-HPC version on subtype CRF02AG
+```{r make_blastdb, eval = rerun}
+pipeline_blastdb(lanl_files[4], verbose = FALSE)
+list.files("./blastDB")
+```
+
+### Process UK sequences BLAST UK sequences and add aligned hits
+- With pipeline that
+    - splits MSA in smaller chunks (in new folder `*_splits`)
+    - removes drug resistance mutation sites
+    - BLAST UK sequences against corresponding global database
+    - merges back the splits
+    - add aligned hits
+    - and add ref sequences as outgroup for rooting
+- It generates
+    - a list of unique BLAST hits `*_nodrm_unique_blast_hits.rds`
+    - an alignement ready for tree estimation in the form `*_nodrm_ref_og.fas`
+```{r process_UK_seq, eval = TRUE}
+## CRF02AG only
+pipeline_msa(path.msa = uk_files[4], verbose = FALSE)
+(LSTFAS <- list.files(pattern = "_nodrm_ref_og.fas$", recursive = TRUE, full.names=TRUE))
+```
+
+
+
+### Maximum likelihood trees
+- Make first tree (here on local machine)
+```{r tree0, eval = rerun}
+pipeline_tree0(pathmsa=LSTFAS[1])
+```
+
+
