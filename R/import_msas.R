@@ -31,8 +31,8 @@ lanl_msa <- function(){
   nm <- d$results[, "Item"]
   lst <- nm[grepl("^db_.*$", nm)]
   data(list = lst, package = 'tenbrit', envir = environment() )
-  lapply(lst, function(x) {
-    print(paste("Save", paste0("data/",x,".rds")))
+  du <- lapply(lst, function(x) {
+    #print(paste("Save", paste0("data/",x,".rds")))
     saveRDS(get(x), file = paste0("data/",x,".rds"))
     })
 }

@@ -79,7 +79,8 @@ hpc.cmd.funr <- function(f.name = "norm_test",
 ####---- hpc.cmd.array ----
 #' Create HPC command with qsub array jobs
 #'
-#' See \code{\link{hpc.cmd.funr}}. TODO: bash version
+#' See \code{\link{hpc.cmd.funr}}.
+#' If not on HPC, bash scripts are generated using lapply().
 #' @param inputs R list of inputs or infiles, passed to an bash array and indexed as \code{$PBS_ARRAY_INDEX}
 #' @param f.name Function name in quotes [default = norm_test], example function
 #' @param f.arg Function arguments in the form \code{"arg1=x arg2=y"}
@@ -110,14 +111,14 @@ hpc.cmd.array <- function(inputs = list(3,5),
 {
   #browser()
   PATHRS <- system.file("ext", "do_funr.Rscript", package = PKG, mustWork = TRUE)
-  ins <- paste(paste0("IN=(",paste(inputs, collapse = ' '),")"), "N=${IN[$PBS_ARRAY_INDEX - 1]}", sep ="\n ") # zero indexed array
-  cmd <- paste(ins, paste("Rscript", PATHRS, f.name, f.arg), sep ="\n ")
-  if (verbose) {print(cmd)}
   bang <- "#!/usr/bin/env bash"
 
   ##- HPC
   if( nchar( Sys.which("qsub") ) ){
-    ##- dir for log files
+  ins <- paste(paste0("IN=(",paste(inputs, collapse = ' '),")"), "N=${IN[$PBS_ARRAY_INDEX - 1]}", sep ="\n ") # zero indexed array
+  cmd <- paste(ins, paste("Rscript", PATHRS, f.name, f.arg), sep ="\n ")
+  if (verbose) {print(cmd)}
+      ##- dir for log files
     dirlog <- paste0("stdout", "/", f.name, ".log")
     dir.create("stdout", showWarnings = FALSE)
     dir.create(dirlog, showWarnings = FALSE)
@@ -141,14 +142,19 @@ hpc.cmd.array <- function(inputs = list(3,5),
   }
   ##- local machine
   else {
-    fullscript <- paste(bang, cmd, sep = "\n")
-    path.sh <- tempfile(pattern = paste0(f.name,"_"), fileext = ".sh") # tmpdir = "."
-    writeLines(fullscript, con = path.sh)
-    if(verbose) print(paste("Writing bash script in", path.sh))
-    if(submit){
-      system(paste("bash", path.sh))
-    }
-    return(list(script = fullscript))
+    lscripts <- lapply(inputs, function(x){
+      ins <- paste0("N=", x)
+      cmd <- paste(ins, paste("Rscript", PATHRS, f.name, f.arg), sep ="\n ")
+      fullscript <- paste(bang, cmd, sep = "\n")
+      path.sh <- tempfile(pattern = paste0(f.name,"_"), fileext = ".sh") # tmpdir = "."
+      writeLines(fullscript, con = path.sh)
+      if(verbose) print(paste("Writing bash script in", path.sh))
+      if(submit){
+        system(paste("bash", path.sh))
+      }
+      return(fullscript)
+    })
+    return(lscripts)
   }
 }
 

@@ -36,7 +36,8 @@ hpc.cmd.array(inputs = list(3, 5), f.name = "norm_test", f.arg = "n=$N",
 List containing script to execute with \code{qsub} or \code{bash}. If \code{submit = TRUE}, run the script. If \code{submit = TRUE} and on HPC, output the PBS_JOBID number
 }
 \description{
-See \code{\link{hpc.cmd.funr}}. TODO: bash version
+See \code{\link{hpc.cmd.funr}}.
+If not on HPC, bash scripts are generated using lapply().
 }
 \examples{
 hpc.cmd.array(inputs = list(3,5), f.name = "norm_test", f.arg = "n=$N", submit = TRUE)
