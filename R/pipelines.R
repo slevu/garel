@@ -216,6 +216,7 @@ do_examl <- function(FAS = "data/MSM_CRF02AG_splits/MSM_CRF02AG_nodrm_ref_og.fas
   jobid <- NULL
   dir.create(DIR, showWarnings= FALSE)
   FULLDIR <- normalizePath(DIR) # full name
+  #NM <- sub('\\.[a-z]{1,}$', '', basename(FAS), perl = TRUE)
   ##- HPC
   if( nchar( Sys.which("qsub")) ){
   ## copy as *.R
@@ -227,13 +228,20 @@ do_examl <- function(FAS = "data/MSM_CRF02AG_splits/MSM_CRF02AG_nodrm_ref_og.fas
   jobid <- big.phylo::pipeline.ExaML.bootstrap.per.proc(indir=FULLDIR, infile=INFILE, bs.from=bsdebut, bs.to=bsend, bs.n=bsend, hpc.walltime=24, hpc.q=q, hpc.mem=mem, hpc.nproc=16)
   on.exit(setwd(wd)) ## back home no matter what
   } else {
+  bang <- "#!/usr/bin/env bash"
   tofile = paste(DIR, sub('\\.[a-z]{1,}$', '.fasta', basename(FAS), perl = TRUE), sep = '/')
   file.copy(from = FAS, to = tofile)
   INFILE <- basename(tofile)
+  OUTZIP <- sub('\\.[a-z]{1,}$', "_examlout.zip", tofile, perl = TRUE)
   ##- local machine (fasta input)
   cmd <- big.phylo::cmd.examl.bootstrap.on.one.machine(indir=FULLDIR, infile=INFILE, bs.from=bsdebut, bs.to=bsend)
-  system(paste("bash", cmd))
+  fullscript <- paste(bang, cmd, sep = "\n")
+  path.sh <- paste(FULLDIR,"cmd_do_examl.sh", sep = "/")
+  writeLines(fullscript, con = path.sh )
+  system(paste("bash", path.sh))
   }
+  ## unzip
+  unzip(OUTZIP, exdir = FULLDIR)
   return(jobid)
 }
 
