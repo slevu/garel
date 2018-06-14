@@ -7,7 +7,7 @@
 #' @importFrom ape reorder.phylo
 #' @export
     sa_by_clades <- function(tr, parms_SA =  get_sa_parms_range(), p = 1){
-      requireNamespace("ape", quietly = TRUE) ## temp fix for ape::reorder.phylo in phylo.source.attribution.multiDeme.fgy ## importFrom is not enough ?
+      require(ape) ## temp fix for ape::reorder.phylo in phylo.source.attribution.multiDeme.fgy ## importFrom is not enough ?
       CD4s <- parms_SA[['CD4s']][tr$tip.label]
       STs <- parms_SA[['STs']][tr$tip.label]
       EHIs <- parms_SA[['EHIs']][tr$tip.label]
