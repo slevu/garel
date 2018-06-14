@@ -16,7 +16,10 @@ Imports:
     ape (>= 4.1),
     phytools,
     data.table (>= 1.10.4),
-    funr
+    funr,
+    ggplot2,
+    Rcpp,
+    RcppArmadillo
 Remotes:
     github.com/slevu/big.phylo.git,
     github.com/emvolz-phylodynamics/phydynR/tree/dPikL0.1
@@ -28,13 +31,10 @@ Suggests: knitr,
     devtools,
     parallel,
     outliers,
-    ggplot2,
     gridExtra,
     igraph,
     reshape2,
     lattice,
-    Rcpp,
-    RcppArmadillo,
     tenbrit
 VignetteBuilder: knitr
 LinkingTo: Rcpp,
