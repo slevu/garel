@@ -35,7 +35,7 @@ help(resi)
 All subsequent code comes from `garel` package
 ```{r lib}
 library(garel)
-rerun <- FALSE
+rerun <- TRUE
 ```
 
 ### Load UK and LANL sequences
@@ -58,9 +58,10 @@ lanl_files <- list.files("data", "^db_.*\\.(rda|rds)$", full.names = TRUE)
 lanl_files
 ```
 ### make a smaller msa
-```{r}
+```{r downsample, eval = rerun}
 seqs <- readRDS("./data/MSM_CRF02AG.rds")
-saveRDS(seqs[sample(length(seqs),size = 20)], file = "data/MSM_CRF02AG_small.rds")
+set.seed(10)
+saveRDS(seqs[sample(length(seqs),size = 100)], file = "data/MSM_CRF02AG_small.rds")
 uk_files <- list.files("data", "^MSM_.*\\.(rda|rds)$", full.names = TRUE)
 uk_files
 ```
@@ -88,8 +89,7 @@ list.files("./blastDB")
 - It generates
     - a list of unique BLAST hits `*_nodrm_unique_blast_hits.rds`
     - an alignement ready for tree estimation in the form `*_nodrm_ref_og.fas`
-```{r process_UK_seq, eval = TRUE}
-## CRF02AG only
+```{r process_UK_seq, eval = rerun}
 pipeline_msa(path.msa = uk_files[4], verbose = FALSE)
 (LSTFAS <- list.files(pattern = "_nodrm_ref_og.fas$", recursive = TRUE, full.names=TRUE))
 ```
@@ -102,4 +102,158 @@ pipeline_msa(path.msa = uk_files[4], verbose = FALSE)
 pipeline_tree0(pathmsa=LSTFAS[1])
 ```
 
+Have a look at the tree, with UK sequences in black and global sequences in red
+```{r plot_tree0}
+TREE <- "data/MLTREE0/ExaML_result.MSM_CRF02AG.finaltree.000"
+tr <- ape::read.tree(TREE)
+plot_tree_col_og(tr)
+```
+
+```{r bs_trees}
+FLTDMSAS <- list.files(pattern = "_fltd.fas$", recursive = TRUE, full.names=TRUE)
+
+pipeline_bstrees(
+  pathmsa = FLTDMSAS[1],
+  dirbstree = "data/BSTREES",
+  BSD=0, BSE=2, Q = NA)
+```
+
+plot
+
+```{r plot2}
+POSTLSD <- list.files(pattern = "ExaML_result.*post_lsd\\.\\d{3}_lsd\\.rds$", recursive = TRUE)
+plot_all_lsd_tree(POSTLSD)
+
+script <- lapply(POSTLSD, function(x){
+      Sys.sleep(.1)
+      hpc.cmd.funr(f.name = "extract_clades",
+                   f.arg = paste0("lsd_results=", x),
+ hpc.time = "#PBS -l walltime=00:59:00",
+                   submit = TRUE,
+                   hpc.q = NA)
+    })
+
+path_clades <- list.files(path = "data/CLADES", pattern = "clades", full.names = TRUE)
+
+iter <- 1:3
+dummy <- lapply(path_clades, function(x) {
+script <- sapply(iter, function(i){
+  Sys.sleep(.1)
+  hpc.cmd.funr(f.name = "get_ip",
+               f.arg = paste0("pathclade=", x),
+               hpc.time = "#PBS -l walltime=00:59:00",
+               submit = TRUE,
+               hpc.q = NA, 
+               verbose = TRUE)
+})
+})
+
+```
+
+Process infector probs
+
+```{r}
+IP <- list.files(path ="data/IPS", pattern = "ip.*\\.rds$", full.names = TRUE)
+list_mean_ips_per_bs <- mean_ip_per_bs(pathip=IP)
+```
+
+```{r}
+data("df", package = "tenbrit", envir = environment())
+sub_df_msm <- df[ grepl("MSM", df$group), ]
+```
+
+```{r}
+list_ip_by_age_bs <- lapply(c(age_cl4 = 'age_cl4'),
+                           function(v) {
+                             lapply(list_mean_ips_per_bs, function(g){
+                               lapply(g, function(x) ip_by_var(x, sub_df_msm, v))
+                             }) 
+                           })
+
+```
+
+```{r}
+var_order <- list(
+age_cl4 = as.character(quantile(sub_df_msm$ageres, na.rm = T)[-1])
+)
+vars <- "age_cl4"  
+system.time(
+    l_all_mixmat_bs <- lapply(1:length(vars),
+                           function(i){
+                             l <- lapply(list_ip_by_age_bs[[vars[i]]], function(bs){
+                               lapply(bs, edgelist_to_mixingmatrix)
+                             })
+                             return(l)
+                           }) # 6s
+  )
+  names(l_all_mixmat_bs) <- vars
+  ##- reorder all mixing matrix
+  l_mixmat <- lapply(setNames(names(l_all_mixmat_bs),names(l_all_mixmat_bs)), 
+                     function(var){
+    lapply(l_all_mixmat_bs[[var]], function(bs){
+      lapply(bs, function(mat) rorder(m = mat, o = var_order[[var]], normalize = TRUE))
+    })
+  })
+```
+```{r}
+##- 4 matrices (a, b, c ,d) as (M, R, D, A), plus r
+l4 <- lapply(l_mixmat[[1]], function(x){
+  lapply(x, function(m){
+    list(a= m,
+         b = m / rowSums(m)[row(m)],
+         c = m / colSums(m)[col(m)],
+         d = mat2assortmat(m),
+         r = newman_r(m))
+  })
+})
+ll4 <- lapply(l4, ukdrdb:::revert_list)
+```
+
+```{r}
+ci_matrix <- function(lsmat, k = c(.025, 0.975)){
+    d <- dim(lsmat[[2]])
+    if(!all(sapply(lsmat, dim) == d)) stop("must have matrices with same dim")
+    rn <- rownames(lsmat[[1]])
+    cn <- colnames(lsmat[[1]])
+    a <- sapply(lsmat, as.vector)
+    qs <- lapply(setNames(k, k), function(q) {
+      apply(a, 1 , function(x) quantile(x, probs = q))
+    })
+    ms <- lapply(qs, function(x){
+      m <- matrix(x, nrow = d, byrow = F)
+      rownames(m) <- rn
+      colnames(m) <- cn
+      m
+    })  
+    ms
+  }
+  
+  # ci_matrix(lsmat = ll4[['MSM_A']][['a']])
+  lll4 <- lapply(ll4, function(l) lapply(l[1:4], ci_matrix))
+```
+
+```{r}
+array_all_mat <- lapply(ll4, function(st){
+  lapply(st, function(lsmat){ # doesn't include newman coef
+    ## array of 100 m*m matrices
+    ar <- sapply(lsmat, identity, simplify="array")
+    if( is.null(dim(ar)) ){ # vector
+      x <- ar
+      c(mean = mean(x), median = median(x), 
+        quantile(x, probs = c(.025, 0.975)), sd = sd(x))
+    } else { # matrix
+      arm <- apply(ar, 1:2, function(x){
+        c(mean = mean(x), median = median(x), 
+          quantile(x, probs = c(.025, 0.975)), sd = sd(x))
+      }) ## beware: dim = c(1:4, dim(m))
+      #dim(arm) # c(4,4,4)
+      arm
+    }
+    #dim(ar) # c(4, 4, 100)
+  })
+})
+array_all_mat$MSM_CRF02AG$a[1,,] # matrix of mean
+array_all_mat$MSM_CRF02AG$a[3,,] # lo CI
+array_all_mat$MSM_CRF02AG$a[4,,] # up CI
+```
 
