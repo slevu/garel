@@ -132,6 +132,7 @@ splitForDRM <- function(path.seqs, path.out = ".", path.hxb2 = system.file("ext"
   ##- force seqs to matrix
   seqsm <- dnabinToMatrix(seqs)
   max.length.seqs <- dim(seqsm)[2]
+  n.seqs <- dim(seqsm)[1]
 
   ##- extract HXB2 fragment
   ##- if not in it, load it and align it
@@ -148,7 +149,7 @@ splitForDRM <- function(path.seqs, path.out = ".", path.hxb2 = system.file("ext"
     ##- get 100 longer seqs
     seqsm_nogaps <- ape::del.gaps(seqsm)
     lg <- sapply(seqsm_nogaps, length) # length when no gaps
-    pro <- seqsm[order(lg, decreasing = TRUE)[1:n.by.split], ]
+    pro <- seqsm[order(lg, decreasing = TRUE)[1:min(n.seqs, n.by.split)], ] #
 
     ##- align hxb2 with 100 longest seqs profile
     # sp <- sample(dim(seqsm)[1], n.by.split) # random
