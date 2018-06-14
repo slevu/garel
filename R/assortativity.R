@@ -71,6 +71,7 @@ mat_to_heatmap <- function(m, xlab = "", ylab = "", values = TRUE, ...){
 ##- tapply() version, quicker
 edgelist_to_mixingmatrix <- function(df, transpose = TRUE){
   m <- tapply(df[, 3], list(df[,1], df[,2]), sum)
+  m[is.na(m)] <- 0L
   if(transpose) m <- t(m)
   m / sum(m)
 }
