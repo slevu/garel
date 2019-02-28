@@ -149,7 +149,7 @@ mat_to_bar <- function(m, title = NULL,
     flip_mat <- function(m){
       apply(m, 2, rev)
     }
-    vals <- as.vector(t( flip_mat(m) ))
+    vals <- as.vector(m) # as.vector(t( flip_mat(m) ))
     jus <- ifelse(vals < max(vals)/3, -0.5, 1.5)
     cols <- ifelse(vals < max(vals)/3, "black", "white")
 
